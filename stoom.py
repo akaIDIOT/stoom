@@ -42,7 +42,8 @@ class Stoom(Sanic):
         games = await self.client.get(self.urls.get('games'), params={'key': self._config.steam.api_key,
                                                                       'steamid': steam_id,
                                                                       'format': 'json'})
-        return json(await games.json())
+        games = await games.json()
+        return json(sorted(game['appid'] for game in games['response']['games']))
 
 
 if __name__ == '__main__':
