@@ -42,19 +42,23 @@ class Stoom(Sanic):
     async def get_games(self, steam_id):
         games = await self.client.get(self.urls.get('games'), params={'key': self._config.steam.api_key,
                                                                       'steamid': steam_id,
+                                                                      'include_appinfo': 1,
                                                                       'format': 'json'})
         games = await games.json()
-        return sorted(game['appid'] for game in games['response']['games'])
+        return {game['appid']: {'name': game.get('name'),
+                                'logo': game.get('img_logo_url')}
+                for game in games['response']['games']}
 
     async def games(self, request, steam_id):
         return json(await self.get_games(steam_id))
 
     async def get_intersecting_games(self, steam_id, *friends):
-        games = set(await self.get_games(steam_id))
+        games = await self.get_games(steam_id)
+        appids = set(games.keys())
         for friend in friends:
-            games &= set(await self.get_games(friend))
+            appids &= set((await self.get_games(friend)).keys())
 
-        return sorted(games)
+        return {appid: info for appid, info in games.items() if appid in appids}
 
     async def intersect_games(self, request, steam_id1, steam_id2):
         return json(await self.get_intersecting_games(steam_id1, steam_id2))
